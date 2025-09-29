@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for wake word detection using Picovoice Porcupine
+Test script for wake word detection using OpenWakeWord
 
 Usage:
     ./venv/bin/python examples/test_wake_word.py --interactive
@@ -17,24 +17,24 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from config import load_config, WakeWordConfig
-from wake_word import PorcupineDetector
+from wake_word import OpenWakeWordDetector
 from utils.logger import setup_logging, get_logger
 
 
 async def test_wake_word_installation():
-    """Test Porcupine installation"""
+    """Test OpenWakeWord installation"""
     logger = get_logger("WakeWordTest")
     
-    logger.info("Testing Porcupine installation...")
+    logger.info("Testing OpenWakeWord installation...")
     
     try:
-        # Check if we can import pvporcupine
-        import pvporcupine
-        version = pvporcupine.__version__ if hasattr(pvporcupine, '__version__') else "Unknown"
-        logger.info(f"[OK] Porcupine installed (version: {version})")
+        # Check if we can import openwakeword
+        import openwakeword
+        version = openwakeword.__version__ if hasattr(openwakeword, '__version__') else "Unknown"
+        logger.info(f"[OK] OpenWakeWord installed (version: {version})")
         return True
     except ImportError as e:
-        logger.error(f"[ERROR] Porcupine not installed: {e}")
+        logger.error(f"[ERROR] OpenWakeWord not installed: {e}")
         return False
 
 
@@ -43,13 +43,11 @@ async def test_wake_word_models():
     logger = get_logger("WakeWordTest")
     
     try:
-        # List Porcupine built-in keywords
-        builtin_keywords = [
-            "alexa", "americano", "blueberry", "bumblebee", "computer",
-            "grapefruit", "grasshopper", "hey google", "hey siri", "jarvis",
-            "ok google", "picovoice", "porcupine", "terminator"
+        # List OpenWakeWord built-in models
+        builtin_models = [
+            "jarvis", "alexa", "hey_mycroft", "computer", "hey_picovoice"
         ]
-        logger.info(f"Porcupine built-in keywords: {builtin_keywords}")
+        logger.info(f"OpenWakeWord built-in models: {builtin_models}")
         
         return True
         
@@ -71,7 +69,7 @@ async def test_wake_word_detection(config_path, duration=30):
             return False
         
         # Create detector
-        detector = PorcupineDetector(config.wake_word)
+        detector = OpenWakeWordDetector(config.wake_word)
         
         # Setup detection callback
         detected_words = []
@@ -80,13 +78,13 @@ async def test_wake_word_detection(config_path, duration=30):
             detected_words.append((model_name, confidence))
             logger.info(f"[DETECTED] WAKE WORD: {model_name} (confidence: {confidence:.3f})")
         
-        detector.add_detection_callback(on_detection)
+        detector.set_detection_callback(on_detection)
         
         # Start detection
         await detector.start()
         
         # Display model info
-        logger.info(f"Using Porcupine keyword: {config.wake_word.model}")
+        logger.info(f"Using OpenWakeWord model: {config.wake_word.model}")
         
         logger.info(f"Listening for wake word '{config.wake_word.model}' for {duration} seconds...")
         logger.info("Say the wake word to test detection!")
@@ -116,17 +114,17 @@ async def test_model_switching():
     """Test switching between different wake word models"""
     logger = get_logger("WakeWordTest")
     
-    # Test Porcupine built-in keywords (only valid ones)
-    models_to_test = ["picovoice", "alexa", "computer"]
+    # Test OpenWakeWord built-in models (only valid ones)
+    models_to_test = ["jarvis", "alexa", "computer"]
     
-    logger.info(f"Testing Porcupine keywords: {models_to_test}")
+    logger.info(f"Testing OpenWakeWord models: {models_to_test}")
     
     for model_name in models_to_test:
         logger.info(f"Testing model: {model_name}")
         
         try:
             config = WakeWordConfig(model=model_name)
-            detector = PorcupineDetector(config)
+            detector = OpenWakeWordDetector(config)
             
             await detector.start()
             logger.info(f"  [OK] {model_name}: Successfully initialized")
@@ -143,7 +141,7 @@ async def test_specific_model(model_name):
     
     try:
         config = WakeWordConfig(model=model_name)
-        detector = PorcupineDetector(config)
+        detector = OpenWakeWordDetector(config)
         await detector.start()
         logger.info(f"Successfully initialized '{model_name}'")
         await detector.stop()
@@ -169,7 +167,7 @@ async def interactive_test(config_path, sensitivity=None, model_override=None):
         config.wake_word.model = model_override
         print(f"Overriding model to {model_override}")
     
-    detector = PorcupineDetector(config.wake_word)
+    detector = OpenWakeWordDetector(config.wake_word)
     
     # Test audio device first
     from audio.capture import AudioCapture
@@ -208,7 +206,7 @@ async def interactive_test(config_path, sensitivity=None, model_override=None):
         
         last_detection_time = current_time
     
-    detector.add_detection_callback(on_detection)
+    detector.set_detection_callback(on_detection)
     
     # Start audio capture and test microphone
     audio_capture = AudioCapture(config.audio)
@@ -290,8 +288,8 @@ async def interactive_test(config_path, sensitivity=None, model_override=None):
     print(f"Audio device: {config.audio.input_device}")
     print(f"Sample rate: {config.audio.sample_rate}Hz")
     
-    # Show Porcupine status
-    print(f"Porcupine wake word engine active")
+    # Show OpenWakeWord status
+    print(f"OpenWakeWord wake word engine active")
     
     print(f"Say '{config.wake_word.model}' to test detection")
     print("Press Ctrl+C to stop")

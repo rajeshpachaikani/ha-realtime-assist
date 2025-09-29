@@ -1,7 +1,7 @@
 """
-Wake word detection module using Picovoice Porcupine
+Wake word detection module using OpenWakeWord
 """
-from .porcupine_detector import PorcupineDetector
+from .openwakeword_detector import OpenWakeWordDetector
 
-# Export the Porcupine detector
-__all__ = ['PorcupineDetector']
+# Export the OpenWakeWord detector
+__all__ = ['OpenWakeWordDetector']

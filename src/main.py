@@ -24,7 +24,7 @@ from services.ha_client.mcp_official import MCPClient
 from audio.capture import AudioCapture
 from audio.playback import AudioPlayback
 from function_bridge_mcp import MCPFunctionBridge
-from wake_word import PorcupineDetector
+from wake_word import OpenWakeWordDetector
 
 
 def check_security_permissions():
@@ -102,7 +102,7 @@ class VoiceAssistant:
         self.audio_capture: Optional[AudioCapture] = None
         self.audio_playback: Optional[AudioPlayback] = None
         self.function_bridge: Optional[MCPFunctionBridge] = None
-        self.wake_word_detector: Optional[PorcupineDetector] = None
+        self.wake_word_detector: Optional[OpenWakeWordDetector] = None
         
         # Session state
         self.session_state = SessionState.IDLE
@@ -1097,13 +1097,13 @@ class VoiceAssistant:
         if self.config.wake_word.enabled:
             self.logger.debug("Wake word enabled, creating detector")
             self.logger.info("Initializing wake word detector...")
-            self.wake_word_detector = PorcupineDetector(self.config.wake_word)
+            self.wake_word_detector = OpenWakeWordDetector(self.config.wake_word)
             self.logger.debug("About to start wake word detector")
             await self.wake_word_detector.start()
             self.logger.debug("Wake word detector started")
             
             # Setup wake word detection callback
-            self.wake_word_detector.add_detection_callback(self._on_wake_word_detected)
+            self.wake_word_detector.set_detection_callback(self._on_wake_word_detected)
             
             # Setup audio handlers for wake word detection
             self.audio_capture.add_callback(self._on_audio_captured_for_wake_word)

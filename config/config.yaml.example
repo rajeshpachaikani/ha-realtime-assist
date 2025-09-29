@@ -71,7 +71,7 @@ audio:
 # Wake Word Configuration
 wake_word:
   enabled: true                   # Enable wake word detection
-  model: "picovoice"              # Porcupine built-in keyword (see options below)
+  model: "jarvis"                 # OpenWakeWord model (jarvis, alexa, hey_mycroft, computer, hey_picovoice)
   sensitivity: 1.0                # Detection sensitivity (0.0-1.0, 1.0 = maximum); try adjusting input volume first
   timeout: 5.0                    # Session timeout after wake word (seconds)
   vad_enabled: false              # Voice activity detection
@@ -81,23 +81,23 @@ wake_word:
   audio_gain: 1.0                 # Audio amplification factor (1.0-5.0)
   audio_gain_mode: "fixed"        # Gain mode: "fixed" or "dynamic"
   
-  # Porcupine-specific configuration
-  porcupine_access_key: ${PICOVOICE_ACCESS_KEY}  # From environment variable
-  highpass_filter_enabled: true   # High-pass filter (REQUIRED for Porcupine to work properly)
-  highpass_filter_cutoff: 80.0    # Filter cutoff frequency in Hz (80Hz removes DC offset/rumble)
+  # OpenWakeWord-specific configuration
+  inference_framework: "onnx"     # Inference framework: "onnx" or "tflite"
+  model_path: null                # Custom model path (optional)
+  enable_speex_noise_suppression: true  # Enable noise suppression
   
-  # Available Porcupine built-in keywords (use these exact names in 'model' field):
-  #   alexa, americano, blueberry, bumblebee, computer, grapefruit,
-  #   grasshopper, picovoice, porcupine, terminator
+  # Available OpenWakeWord built-in models (use these names in 'model' field):
+  #   jarvis (maps to hey_jarvis), alexa, hey_mycroft
   #
-  # Note: Popular wake words like "jarvis", "hey google", "hey siri", "ok google"
-  # are NOT built-in and require custom wake word creation at https://console.picovoice.ai/
+  # Note: The model names map to the actual OpenWakeWord model files:
+  #   - jarvis -> hey_jarvis model
+  #   - alexa -> alexa model  
+  #   - hey_mycroft -> hey_mycroft model
   #
-  # For custom wake words:
-  # 1. Create at https://console.picovoice.ai/
-  # 2. Download the .ppn file
-  # 3. Place in config/wake_words/
-  # 4. Set model to the file path
+  # For custom models:
+  # 1. Download or train custom model
+  # 2. Place in config/wake_words/
+  # 3. Set model_path to the file path
   
 # Session Configuration
 session:

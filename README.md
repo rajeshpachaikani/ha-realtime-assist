@@ -16,7 +16,7 @@ This project creates a dedicated voice interface for Home Assistant that runs on
 - 🎙️ **Natural Conversations**: Real-time bidirectional audio streaming with multi-turn support
 - ⚡ **Low Latency**: <600ms voice-to-voice response time  
 - 🏠 **Full HA Control**: Native MCP integration with Home Assistant
-- 👂 **Porcupine Wake Words**: Accurate detection with built-in keywords + custom wake word support
+- 👂 **OpenWakeWord Wake Words**: Accurate local detection with built-in models + custom wake word support
 - 🔊 **Automatic Gain Control**: AGC prevents clipping and maintains optimal audio levels
 - 🌍 **Multi-Language**: End phrases in 6 languages (EN, DE, ES, FR, IT, NL)
 - 🎭 **10+ Voices**: Choose from 10 OpenAI voices including new options
@@ -27,7 +27,7 @@ This project creates a dedicated voice interface for Home Assistant that runs on
 
 ## How It Works
 
-1. **Wake Word Detection**: Local detection using Picovoice Porcupine
+1. **Wake Word Detection**: Local detection using OpenWakeWord
 2. **Audio Streaming**: Captures voice and streams to OpenAI Realtime API
 3. **Smart Control**: OpenAI understands intent and calls HA functions
 4. **Natural Response**: Speaks back with natural, conversational responses
@@ -79,7 +79,7 @@ nano .env
 #   OPENAI_API_KEY=sk-...
 #   HA_URL=http://homeassistant.local:8123
 #   HA_TOKEN=your_home_assistant_token
-#   PICOVOICE_ACCESS_KEY=your_picovoice_key
+#   OPENWAKEWORD_MODEL=jarvis
 
 # (Optional) Customize additional settings
 nano config/config.yaml  # Audio settings, wake word, etc.
@@ -106,14 +106,14 @@ All user-specific settings are managed in the `.env` file:
 - **OPENAI_API_KEY**: Get from [OpenAI Platform](https://platform.openai.com)
 - **HA_URL**: Your Home Assistant instance URL
 - **HA_TOKEN**: Long-lived access token (generate in HA Profile settings)
-- **PICOVOICE_ACCESS_KEY**: Get from [Picovoice Console](https://console.picovoice.ai)
+- **OPENWAKEWORD_MODEL**: OpenWakeWord model name (jarvis, alexa, hey_mycroft)
 
 ### Example .env
 ```bash
 OPENAI_API_KEY=sk-...
 HA_URL=http://homeassistant.local:8123
 HA_TOKEN=eyJ0eXAiOiJKV1...
-PICOVOICE_ACCESS_KEY=your_key_here
+OPENWAKEWORD_MODEL=jarvis
 ```
 
 ### config.yaml Settings
@@ -133,16 +133,16 @@ mcp:
 
 wake_word:
   enabled: true
-  model: "picovoice"
+  model: "jarvis"
   sensitivity: 1.0
 ```
 
 ### Wake Word Setup
 
-The assistant uses Picovoice Porcupine for accurate wake word detection. Built-in keywords include:
-- "picovoice" (default)
-- "alexa", "computer", "jarvis"
-- Custom wake words via .ppn files from Picovoice Console
+The assistant uses OpenWakeWord for accurate wake word detection. Built-in models include:
+- "jarvis" (default)
+- "alexa", "hey_mycroft"
+- Custom wake words via custom model files
 - And more!
 
 See the [Wake Word Setup Guide](docs/WAKE_WORD_SETUP.md) for detailed configuration.
@@ -196,9 +196,9 @@ python src/main.py --log-level DEBUG
 ```
 ✓ Home Assistant Voice Assistant v1.2.0
 ✓ Connected to Home Assistant 2024.1.0
-✓ Listening for wake word 'picovoice'
+✓ Listening for wake word 'jarvis'
 
-► Wake word detected: picovoice
+► Wake word detected: jarvis
 ● Listening...
 ● Processing...
 ● Responding...

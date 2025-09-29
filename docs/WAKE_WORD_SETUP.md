@@ -1,28 +1,21 @@
 # Wake Word Setup Guide
 
-Configure wake word detection using Picovoice Porcupine for reliable hands-free activation.
+Configure wake word detection using OpenWakeWord for reliable hands-free activation.
 
 ## Overview
 
-The assistant uses Picovoice Porcupine for wake word detection. Porcupine offers:
+The assistant uses OpenWakeWord for wake word detection. OpenWakeWord offers:
 - High accuracy with low false positive rates
-- Built-in keywords that work out of the box
+- Built-in models that work out of the box
 - Support for custom wake words
 - Optimized for Raspberry Pi
+- No API keys required - completely local
 
 ## Getting Started
 
-### 1. Get a Picovoice Access Key
+### 1. No Setup Required
 
-Porcupine requires a free access key:
-
-1. Sign up at [console.picovoice.ai](https://console.picovoice.ai)
-2. Create a new project
-3. Copy your access key
-4. Add to `.env` file:
-   ```bash
-   PICOVOICE_ACCESS_KEY=your-access-key-here
-   ```
+OpenWakeWord works out of the box with no API keys or registration required!
 
 ### 2. Basic Configuration
 
@@ -31,28 +24,23 @@ In `config/config.yaml`:
 ```yaml
 wake_word:
   enabled: true
-  model: "picovoice"    # Built-in keyword
+  model: "jarvis"       # Built-in model name
   sensitivity: 1.0      # 0.0-1.0 (1.0 = most sensitive)
 ```
 
-## Built-in Keywords
+## Built-in Models
 
-Porcupine includes these keywords without any downloads:
+OpenWakeWord includes these models without any downloads:
 
-| Keyword | Example Phrase |
-|---------|----------------|
+| Model | Example Phrase |
+|-------|----------------|
+| `jarvis` | "Jarvis" (default) |
 | `alexa` | "Alexa" |
-| `americano` | "Americano" |
-| `blueberry` | "Blueberry" |
-| `bumblebee` | "Bumblebee" |
+| `hey_mycroft` | "Hey Mycroft" |
 | `computer` | "Computer" |
-| `grapefruit` | "Grapefruit" |
-| `grasshopper` | "Grasshopper" |
-| `picovoice` | "Picovoice" (default) |
-| `porcupine` | "Porcupine" |
-| `terminator` | "Terminator" |
+| `hey_picovoice` | "Hey Picovoice" |
 
-**Note**: Popular wake words like "Jarvis", "Hey Google", "Hey Siri", and "Ok Google" are NOT built-in. You'll need to create custom wake words for these (see below).
+**Note**: These are the main built-in models. Additional models can be downloaded or custom trained.
 
 ## Sensitivity Tuning
 
@@ -79,17 +67,19 @@ Adjust sensitivity based on your environment:
 
 ## Audio Configuration
 
-### High-Pass Filter (Required)
+## Audio Configuration
 
-Porcupine requires a high-pass filter to work properly:
+### Noise Suppression
+
+OpenWakeWord includes built-in noise suppression:
 
 ```yaml
 wake_word:
-  highpass_filter_enabled: true   # Must be true
-  highpass_filter_cutoff: 80.0    # Hz
+  enable_speex_noise_suppression: true  # Recommended for better accuracy
+  inference_framework: "onnx"           # Faster than "tflite"
 ```
 
-This removes low-frequency noise and DC offset that can interfere with detection.
+This helps reduce false positives in noisy environments.
 
 ### Audio Gain
 
@@ -107,37 +97,36 @@ wake_word:
 
 ## Custom Wake Words
 
-Want to use "Jarvis", "Hey Assistant", or your own custom phrase? Here's how:
+Want to use a different wake word? You can use custom OpenWakeWord models:
 
-### Creating Custom Keywords
+### Using Custom Models
 
-1. Visit [Picovoice Console](https://console.picovoice.ai)
-2. Click "Create Wake Word"
-3. Enter your phrase (e.g., "Hey Assistant", "Jarvis", etc.)
-4. Select "Raspberry Pi" as the target platform
-5. Click "Train" and wait for generation
-6. Download the `.ppn` file
-
-### Using Custom Keywords
-
-1. Place the `.ppn` file in `config/wake_words/`:
+1. Download or create a custom OpenWakeWord model (`.onnx` file)
+2. Place the model file in the `config/wake_words/` directory:
    ```bash
-   cp ~/Downloads/my_wake_word.ppn config/wake_words/
+   cp ~/Downloads/my_custom_model.onnx config/wake_words/
    ```
 
-2. Update configuration:
+3. Update configuration:
    ```yaml
    wake_word:
-     model: "my_wake_word.ppn"  # Just the filename, not the full path
+     model_path: "config/wake_words/my_custom_model.onnx"
    ```
+
+### Creating Custom Models
+
+For creating custom models, refer to the [OpenWakeWord documentation](https://github.com/dscripka/openWakeWord) for training instructions.
 
 ### Examples
 
 ```yaml
-# Popular custom wake words
-model: "jarvis.ppn"         # "Jarvis" (Iron Man style)
-model: "hey_assistant.ppn"  # "Hey Assistant"
-model: "computer.ppn"       # Custom "Computer" (vs built-in)
+# Using a custom model file
+model_path: "config/wake_words/custom_jarvis.onnx"
+
+# Or using built-in models
+model: "jarvis"          # Built-in Jarvis model
+model: "alexa"           # Built-in Alexa model
+model: "hey_mycroft"     # Built-in Hey Mycroft model
 ```
 
 ### Important Notes
@@ -255,4 +244,4 @@ wake_word:
 
 - Check the [Troubleshooting Guide](TROUBLESHOOTING.md)
 - Review [Audio Setup](AUDIO_SETUP.md) for microphone configuration
-- Visit [Picovoice Docs](https://picovoice.ai/docs/) for advanced features
+- Visit [OpenWakeWord Documentation](https://github.com/dscripka/openWakeWord) for advanced features

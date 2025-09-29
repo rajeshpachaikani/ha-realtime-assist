@@ -34,13 +34,11 @@ OpenWakeWord includes these models without any downloads:
 
 | Model | Example Phrase |
 |-------|----------------|
-| `jarvis` | "Jarvis" (default) |
+| `jarvis` | "Hey Jarvis" (default) |
 | `alexa` | "Alexa" |
 | `hey_mycroft` | "Hey Mycroft" |
-| `computer` | "Computer" |
-| `hey_picovoice` | "Hey Picovoice" |
 
-**Note**: These are the main built-in models. Additional models can be downloaded or custom trained.
+**Note**: The `jarvis` model actually uses the "Hey Jarvis" wake phrase.
 
 ## Sensitivity Tuning
 

@@ -76,17 +76,13 @@ class OpenWakeWordDetector:
         """Get list of model names based on config"""
         model = self.config.model.lower()
         
-        # Check if it's a mapped model name
-        if model in self.MODEL_MAPPING:
-            return [self.MODEL_MAPPING[model]]
+        # If a custom model path is specified
+        if hasattr(self.config, 'model_path') and self.config.model_path:
+            return [self.config.model_path]
         
-        # Check if it's a custom model path
-        if model.endswith('.onnx'):
-            return [model]
-        
-        # Default fallback
-        self.logger.warning(f"Unknown model '{model}', using default 'jarvis_v0.1.onnx'")
-        return ['jarvis_v0.1.onnx']
+        # For built-in models, return empty list to load all pre-trained models
+        # OpenWakeWord will handle loading the default models automatically
+        return []
     
     def _get_detection_threshold(self) -> float:
         """Get detection threshold based on sensitivity"""
@@ -115,8 +111,7 @@ class OpenWakeWordDetector:
             
             # Initialize OpenWakeWord model
             self.oww_model = Model(
-                wakeword_models=model_names,
-                inference_framework='onnx',
+                wakeword_model_paths=model_names,
                 enable_speex_noise_suppression=True
             )
             
@@ -161,10 +156,14 @@ class OpenWakeWordDetector:
         
         self.logger.info("OpenWakeWord detector stopped")
     
-    def process_audio(self, audio_data: bytes, input_sample_rate: int = 24000) -> None:
-        """Process audio data for wake word detection (compatible with main app interface)"""
+    def process_audio(self, audio_data: bytes, input_sample_rate: int = 24000) -> int:
+        """Process audio data for wake word detection (compatible with main app interface)
+        
+        Returns:
+            int: Number of audio chunks processed (for activity tracking)
+        """
         if not self.is_running:
-            return
+            return 0
         
         try:
             # Convert bytes to numpy array
@@ -177,13 +176,18 @@ class OpenWakeWordDetector:
                 audio_np = audio_np[::step]
             
             # Process in chunks of frame_length
+            chunks_processed = 0
             for i in range(0, len(audio_np), self.frame_length):
                 chunk = audio_np[i:i + self.frame_length]
                 if len(chunk) == self.frame_length:
                     self.process_audio_chunk(chunk)
+                    chunks_processed += 1
+                    
+            return chunks_processed
                     
         except Exception as e:
             self.logger.error(f"Error processing audio: {e}")
+            return 0
     
     def process_audio_chunk(self, audio_data: np.ndarray) -> None:
         """Process audio data chunk for wake word detection"""
@@ -248,17 +252,31 @@ class OpenWakeWordDetector:
         if current_time - self.last_detection_time < self.config.cooldown:
             return
         
+        # Only process detections for the configured model or if it matches expected patterns
+        configured_model = self.config.model.lower()
+        
+        # Check if this detection matches our configured model
+        if configured_model == 'jarvis' and model_name != 'hey_jarvis':
+            return
+        elif configured_model == 'alexa' and model_name != 'alexa':
+            return  
+        elif configured_model == 'hey_mycroft' and model_name != 'hey_mycroft':
+            return
+        elif configured_model not in ['jarvis', 'alexa', 'hey_mycroft'] and model_name not in ['hey_jarvis', 'alexa', 'hey_mycroft']:
+            # For other models, accept any detection for now
+            pass
+        
         self.last_detection_time = current_time
         
-        # Extract wake word from model name (remove version suffix)
-        wake_word = model_name.replace('_v0.1.onnx', '').replace('.onnx', '')
+        # Use a friendlier wake word name for display
+        display_name = model_name.replace('hey_', '').replace('_', ' ')
         
-        self.logger.info(f"Wake word detected: '{wake_word}' (score: {score:.3f})")
+        self.logger.info(f"Wake word detected: '{display_name}' (score: {score:.3f})")
         
         # Call detection callback if set
         if self.detection_callback:
             try:
-                self.detection_callback(wake_word, score)
+                self.detection_callback(display_name, score)
             except Exception as e:
                 self.logger.error(f"Error in detection callback: {e}")
     

@@ -106,7 +106,7 @@ All user-specific settings are managed in the `.env` file:
 - **OPENAI_API_KEY**: Get from [OpenAI Platform](https://platform.openai.com)
 - **HA_URL**: Your Home Assistant instance URL
 - **HA_TOKEN**: Long-lived access token (generate in HA Profile settings)
-- **OPENWAKEWORD_MODEL**: OpenWakeWord model name (jarvis, alexa, hey_mycroft, computer, hey_picovoice)
+- **OPENWAKEWORD_MODEL**: OpenWakeWord model name (jarvis, alexa, hey_mycroft)
 
 ### Example .env
 ```bash
@@ -141,7 +141,7 @@ wake_word:
 
 The assistant uses OpenWakeWord for accurate wake word detection. Built-in models include:
 - "jarvis" (default)
-- "alexa", "computer", "hey_mycroft", "hey_picovoice"
+- "alexa", "hey_mycroft"
 - Custom wake words via custom model files
 - And more!
 

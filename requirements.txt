@@ -26,6 +26,7 @@ asyncio-mqtt>=0.13.0
 
 # Wake word detection using OpenWakeWord
 openwakeword>=0.4.0
+speexdsp-ns>=0.1.2
 
 # Web UI dependencies
 aiohttp-jinja2>=1.5.0

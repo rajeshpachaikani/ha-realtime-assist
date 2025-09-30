@@ -18,12 +18,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 # Import wake word detector if available
 try:
-    from wake_word.porcupine_detector import PorcupineDetector
+    from wake_word.openwakeword_detector import OpenWakeWordDetector
     from config import WakeWordConfig
-    PORCUPINE_AVAILABLE = True
+    OPENWAKEWORD_AVAILABLE = True
 except ImportError:
-    PORCUPINE_AVAILABLE = False
-    PorcupineDetector = None
+    OPENWAKEWORD_AVAILABLE = False
+    OpenWakeWordDetector = None
     WakeWordConfig = None
 
 try:

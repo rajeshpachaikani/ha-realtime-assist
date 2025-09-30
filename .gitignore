@@ -122,3 +122,7 @@ reports/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+
+# Ignore models
+config/models/*.onnx
+config/models/*.tflite

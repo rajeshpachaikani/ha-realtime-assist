@@ -9,6 +9,8 @@ import asyncio
 import argparse
 import signal
 import sys
+import os
+import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from enum import Enum
@@ -25,6 +27,8 @@ from audio.capture import AudioCapture
 from audio.playback import AudioPlayback
 from function_bridge_mcp import MCPFunctionBridge
 from wake_word import OpenWakeWordDetector
+from ha_profile_client import HAProfileClient
+from conversation_summarizer import ConversationSummarizer
 
 
 def check_security_permissions():
@@ -103,6 +107,10 @@ class VoiceAssistant:
         self.audio_playback: Optional[AudioPlayback] = None
         self.function_bridge: Optional[MCPFunctionBridge] = None
         self.wake_word_detector: Optional[OpenWakeWordDetector] = None
+        
+        # Profile and conversation tracking components
+        self.profile_client: Optional[HAProfileClient] = None
+        self.conversation_summarizer: Optional[ConversationSummarizer] = None
         
         # Session state
         self.session_state = SessionState.IDLE
@@ -1113,6 +1121,37 @@ class VoiceAssistant:
         
         self.logger.info("All components initialized successfully")
         
+        # Initialize profile client if configured
+        ha_url = os.getenv("HA_URL")
+        ha_token = os.getenv("HA_TOKEN")
+
+        if ha_url and ha_token:
+            self.profile_client = HAProfileClient(ha_url, ha_token)
+            self.logger.info(f"Profile client initialized for {ha_url}")
+            
+            # Initialize conversation summarizer
+            silence_timeout = float(os.getenv("PROFILE_SILENCE_TIMEOUT", "5.0"))
+            summary_model = os.getenv("PROFILE_SUMMARY_MODEL", "gpt-4o-mini")
+            
+            self.conversation_summarizer = ConversationSummarizer(
+                openai_api_key=self.config.openai.api_key,
+                silence_timeout=silence_timeout,
+                model=summary_model
+            )
+            
+            # Set callback for when summary is generated
+            self.conversation_summarizer.on_summary_generated = self._on_profile_summary
+            
+            self.logger.info(
+                f"Conversation summarizer initialized "
+                f"(silence_timeout={silence_timeout}s, model={summary_model})"
+            )
+        else:
+            self.logger.info(
+                "Profile integration disabled "
+                "(set HA_URL and HA_TOKEN in .env to enable)"
+            )
+        
         # Broadcast initial status to web UI
         await self._broadcast_connection_status()
         
@@ -1148,6 +1187,22 @@ class VoiceAssistant:
                     await component.disconnect()
                 except Exception as e:
                     self.logger.warning(f"Error disconnecting {name}: {e}")
+        
+        # Cleanup profile client
+        if self.profile_client:
+            try:
+                await self.profile_client.close()
+                self.logger.info("Profile client closed")
+            except Exception as e:
+                self.logger.warning(f"Error closing profile client: {e}")
+        
+        # End conversation tracking if active
+        if self.conversation_summarizer and self.conversation_summarizer.is_active:
+            try:
+                self.conversation_summarizer.end_conversation()
+                self.logger.info("Conversation tracking ended")
+            except Exception as e:
+                self.logger.warning(f"Error ending conversation tracking: {e}")
     
     async def _main_loop(self) -> None:
         """Main application loop"""
@@ -1364,6 +1419,11 @@ class VoiceAssistant:
         self.session_active = True
         self.last_activity = asyncio.get_event_loop().time()
         self.session_start_time = asyncio.get_event_loop().time()
+        
+        # Start conversation tracking for profile learning
+        if self.conversation_summarizer:
+            self.conversation_summarizer.start_conversation()
+            self.logger.debug("Started conversation tracking for profile learning")
         
         # Reset response tracking
         self.response_done_received = False
@@ -1939,6 +1999,14 @@ class VoiceAssistant:
         self.logger.info("OpenAI finished sending audio response")
         print("*** OPENAI FINISHED SENDING AUDIO - WAITING FOR PLAYBACK COMPLETION ***")
         
+        # Track assistant response for profile learning
+        # Note: OpenAI Realtime API sends audio directly, transcript not always available
+        # We track a generic response to maintain conversation context
+        if self.conversation_summarizer and self.last_user_input:
+            assistant_response = f"[Audio response to: {self.last_user_input}]"
+            self.conversation_summarizer.add_message("assistant", assistant_response)
+            self.logger.debug("Tracked assistant audio response")
+        
         # Notify audio playback that OpenAI finished sending
         if self.audio_playback:
             self.audio_playback.end_response()
@@ -1979,6 +2047,47 @@ class VoiceAssistant:
         else:
             self.logger.error("No event loop available for audio completion")
             # Don't end session - just log the error
+    
+    async def _on_profile_summary(self, summary: Dict[str, Any]) -> None:
+        """
+        Handle generated conversation summary.
+        
+        Called by ConversationSummarizer when a conversation ends after silence.
+        Merges the summary into the user's profile in Home Assistant.
+        
+        Args:
+            summary: Extracted preferences, topics, style, etc.
+        """
+        try:
+            self.logger.info(f"Received conversation summary: {list(summary.keys())}")
+            self.logger.debug(f"Summary content: {json.dumps(summary, indent=2)}")
+            
+            if not self.profile_client:
+                self.logger.warning("Profile client not initialized, cannot update profile")
+                return
+            
+            # Merge summary into profile (preserves existing data)
+            success = await self.profile_client.merge_profile(summary)
+            
+            if success:
+                self.logger.info("✓ Successfully updated user profile with conversation learnings")
+                
+                # Optionally log what was learned
+                learned_items = []
+                if "preferences" in summary:
+                    learned_items.append(f"{len(summary['preferences'])} preferences")
+                if "topics_of_interest" in summary:
+                    learned_items.append(f"{len(summary['topics_of_interest'])} topics")
+                if "dislikes" in summary:
+                    learned_items.append(f"{len(summary['dislikes'])} dislikes")
+                
+                if learned_items:
+                    self.logger.info(f"Learned: {', '.join(learned_items)}")
+            else:
+                self.logger.error("✗ Failed to update user profile")
+        
+        except Exception as err:
+            self.logger.error(f"Error handling profile summary: {err}", exc_info=True)
     
     async def _handle_audio_completion(self) -> None:
         """Handle audio completion in async context"""
@@ -2696,6 +2805,11 @@ class VoiceAssistant:
         
         self.logger.info(f"User transcription received: '{transcript}' (language: {language}, item_id: {item_id})")
         print(f"*** USER SAID: '{transcript}' (LANGUAGE: {language}) ***")
+        
+        # Track user message for profile learning
+        if self.conversation_summarizer and transcript:
+            self.conversation_summarizer.add_message("user", transcript)
+            self.logger.debug(f"Tracked user: {transcript[:50]}...")
         
         # Check for end phrases immediately in multi-turn mode
         if self.config.session.conversation_mode == "multi_turn" and self.session_active:

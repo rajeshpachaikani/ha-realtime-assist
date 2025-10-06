@@ -35,13 +35,13 @@ class AudioPlayback:
         # State
         self.is_playing = False
         self.stream: Optional[sd.OutputStream] = None
-        self.audio_queue = Queue(maxsize=150)  # Large queue for Pi stability
+        self.audio_queue = Queue(maxsize=200)  # Larger queue for Pi stability (increased from 150)
         
         # Enhanced buffering for smooth playback - optimized for Raspberry Pi hardware
         self.audio_buffer = np.array([], dtype=np.float32)
-        self.min_buffer_size = int(self.device_sample_rate * 0.20)  # 200ms buffer minimum (increased)
-        self.target_buffer_size = int(self.device_sample_rate * 0.50)  # 500ms target buffer (increased)
-        self.max_buffer_size = int(self.device_sample_rate * 2.0)  # 2s maximum buffer to handle large OpenAI chunks
+        self.min_buffer_size = int(self.device_sample_rate * 0.30)  # 300ms buffer minimum (increased from 200ms)
+        self.target_buffer_size = int(self.device_sample_rate * 0.75)  # 750ms target buffer (increased from 500ms)
+        self.max_buffer_size = int(self.device_sample_rate * 3.0)  # 3s maximum buffer to handle large OpenAI chunks (increased from 2s)
         
         # Resampling
         self.need_resampling = self.device_sample_rate != self.source_sample_rate
@@ -78,7 +78,7 @@ class AudioPlayback:
         
         # Pre-buffering for smooth playback start
         self.pre_buffering = False
-        self.pre_buffer_threshold = int(self.device_sample_rate * 0.5)  # 500ms before starting playback
+        self.pre_buffer_threshold = int(self.device_sample_rate * 0.75)  # 750ms before starting playback (increased from 500ms)
         
         # Track OpenAI streaming state
         self.openai_streaming_active = False
@@ -116,10 +116,10 @@ class AudioPlayback:
                 'dtype': np.float32,
                 'blocksize': self.chunk_size,
                 'callback': self._audio_callback,
-                'latency': 'high'  # Higher latency for Pi stability
+                'latency': 0.2  # 200ms latency for maximum Pi stability (was 'high' which might be too low)
             }
             
-            self.logger.debug("Using ALSA defaults with high latency for Raspberry Pi stability")
+            self.logger.debug("Using 200ms explicit latency for maximum Raspberry Pi stability")
             
             # Create stream with error handling
             try:
@@ -168,7 +168,7 @@ class AudioPlayback:
                 self.is_playing = False
                 raise RuntimeError(f"Failed to start playback thread: {e}")
             
-            self.logger.info(f"Raspberry Pi audio playback started successfully (device: {self.output_device}, rate: {self.device_sample_rate}Hz, latency: high)")
+            self.logger.info(f"Raspberry Pi audio playback started successfully (device: {self.output_device}, rate: {self.device_sample_rate}Hz, latency: 200ms)")
             
         except Exception as e:
             self.logger.error(f"Failed to start audio playback: {e}")
@@ -401,7 +401,13 @@ class AudioPlayback:
             status: Status flags
         """
         if status:
-            self.logger.warning(f"Audio callback status: {status}")
+            # Only log output underflow at debug level to reduce noise
+            # These are expected on Raspberry Pi during network delays
+            if 'output underflow' in str(status).lower():
+                self.logger.debug(f"Audio callback status: {status} (frames={frames}, buffer={len(self.audio_buffer)})")
+            else:
+                # Log other status messages as warnings
+                self.logger.warning(f"Audio callback status: {status}")
         
         # Fill with silence by default
         outdata.fill(0)

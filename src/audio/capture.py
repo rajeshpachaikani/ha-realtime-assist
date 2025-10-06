@@ -83,7 +83,7 @@ class AudioCapture:
                 'dtype': np.float32,
                 'blocksize': self.chunk_size,
                 'callback': self._audio_callback,
-                'latency': 'high'  # Higher latency for Pi stability
+                'latency': 0.2  # 200ms latency for maximum Pi stability
             }
             
             # Create stream with error handling
@@ -133,7 +133,7 @@ class AudioCapture:
                 self.is_recording = False
                 raise RuntimeError(f"Failed to start capture processing thread: {e}")
             
-            self.logger.info(f"Raspberry Pi audio capture started successfully (device: {self.input_device}, rate: {self.device_sample_rate}Hz, latency: high)")
+            self.logger.info(f"Raspberry Pi audio capture started successfully (device: {self.input_device}, rate: {self.device_sample_rate}Hz, latency: 200ms)")
             
         except Exception as e:
             self.logger.error(f"Failed to start audio capture: {e}")
